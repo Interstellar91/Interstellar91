@@ -1,0 +1,125 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                       String    @id @default(uuid())
+  supabase_user_id         String?   @unique
+  email                    String    @unique
+  name                     String?
+  company                  String?
+  industry                 String?
+  country                  String?
+  timezone                 String?
+  avatar_url               String?
+  tier                     String    @default("FREE")
+  stripe_customer_id       String?   @unique
+  stripe_subscription_id   String?   @unique
+  subscription_status      String?
+  current_period_end       DateTime?
+  messages_used_this_month Int       @default(0)
+  messages_reset_date      DateTime? @default(now())
+  last_login               DateTime?
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+
+  conversations Conversation[]
+  campaigns     Campaign[]
+  reports       Report[]
+  usageLogs     UsageLog[]
+}
+
+model Conversation {
+  id               String     @id @default(uuid())
+  user_id          String
+  title            String
+  preview          String?
+  tags             String[]   @default([])
+  is_favorite      Boolean    @default(false)
+  folder           String?
+  total_messages   Int        @default(0)
+  tokens_used      Int        @default(0)
+  last_message_at  DateTime?
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+
+  user      User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages  Message[]
+  reports   Report[]
+}
+
+model Message {
+  id              String    @id @default(uuid())
+  conversation_id String
+  role            String
+  content         String
+  tokens          Int?
+  model           String?
+  created_at      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id             String    @id @default(uuid())
+  user_id        String
+  name           String
+  platform       String
+  objective      String
+  status         String    @default("DRAFT")
+  budget_total   Decimal   @default(0)
+  budget_spent   Decimal   @default(0)
+  currency       String    @default("USD")
+  location       String[]  @default([])
+  age_min        Int?
+  age_max        Int?
+  interests      String[]  @default([])
+  strategy       String?
+  impressions    Int?
+  clicks         Int?
+  conversions    Int?
+  cpa            Decimal?
+  roas           Decimal?
+  total_messages Int       @default(0)
+  tokens_used    Int       @default(0)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reports Report[]
+}
+
+model Report {
+  id              String        @id @default(uuid())
+  user_id         String
+  campaign_id     String?
+  conversation_id String?
+  title           String
+  type            String
+  data            Json
+  pdf_url         String?
+  start_date      DateTime?
+  end_date        DateTime?
+  created_at      DateTime      @default(now())
+
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  campaign     Campaign?    @relation(fields: [campaign_id], references: [id])
+  conversation Conversation? @relation(fields: [conversation_id], references: [id])
+}
+
+model UsageLog {
+  id          String   @id @default(uuid())
+  user_id     String
+  event_type  String
+  tokens_used Int?
+  cost_usd    Decimal?
+  metadata    Json?
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
